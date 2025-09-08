@@ -1,0 +1,5 @@
+simulate
+tests
+*.dSYM/
+.vscode/
+obj/
