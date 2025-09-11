@@ -44,7 +44,7 @@ void startGui(const Game &game) {
   renderer = std::make_unique<GameStateRenderer>(ren, game);
 }
 
-void runGui() {
+bool runGui() {
   auto ev = SDL_Event();
   SDL_PollEvent(&ev);
   renderer->render();
@@ -53,10 +53,14 @@ void runGui() {
     int x, y;
     SDL_GetMouseState(&x, &y);
     std::cout << "Mouse: " << x << ", " << y << std::endl;
+    return true;
   }
+
+  return ev.type != SDL_QUIT;
 }
 
 void destroyGui() {
+  renderer = nullptr;
   if (win != nullptr) {
     SDL_DestroyWindow(win);
   }

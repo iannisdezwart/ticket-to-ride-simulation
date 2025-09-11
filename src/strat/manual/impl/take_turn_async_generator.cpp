@@ -76,21 +76,21 @@ TakeTurnAsyncGenerator::Ret TakeTurnAsyncGenerator::waitingForChild() {
 }
 
 TakeTurnAsyncGenerator::Ret TakeTurnAsyncGenerator::drawTrainCarCards() {
-  child = transformAsyncGenerator<TurnDecision>(
+  child = transform<TurnDecision>(
       std::make_unique<DrawTrainCarCardsDecisionGenerator>(reader, gameState));
   state = State::WaitingForChild;
   return waitingForChild();
 }
 
 TakeTurnAsyncGenerator::Ret TakeTurnAsyncGenerator::claimRoute() {
-  child = transformAsyncGenerator<TurnDecision>(
+  child = transform<TurnDecision>(
       std::make_unique<ClaimRouteDecisionGenerator>(reader, gameState));
   state = State::WaitingForChild;
   return waitingForChild();
 }
 
 TakeTurnAsyncGenerator::Ret TakeTurnAsyncGenerator::buildTrainStation() {
-  child = transformAsyncGenerator<TurnDecision>(
+  child = transform<TurnDecision>(
       std::make_unique<BuildTrainStationDecisionGenerator>(reader, gameState));
   state = State::WaitingForChild;
   return waitingForChild();

@@ -1,14 +1,7 @@
 #pragma once
 
-#include "core/destination_ticket_card.hpp"
 #include "core/map.hpp"
+#include <cstdint>
 #include <vector>
 
-struct CompletedRoutesReport {
-  std::vector<bool> completed;
-  int points;
-};
-
-CompletedRoutesReport
-evalCompletedRoutes(int playerIdx, const Map &map,
-                    std::vector<DestinationTicketCard> cards);
+std::vector<int> evalCompletedRoutes(uint8_t numPlayers, const Routes &routes);

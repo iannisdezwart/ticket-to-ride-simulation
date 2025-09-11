@@ -14,6 +14,7 @@ template <typename T> struct AsyncGenerator {
 template <typename T>
 using AsyncGeneratorPtr = std::unique_ptr<AsyncGenerator<T>>;
 
+namespace detail {
 template <typename T, typename U, typename F>
 class TransformedAsyncGenerator : public AsyncGenerator<T> {
 private:
@@ -31,9 +32,26 @@ struct Identity {
     return std::forward<X>(x);
   }
 };
+} // namespace detail
 
-template <typename T, typename U, typename F = Identity>
-AsyncGeneratorPtr<T> transformAsyncGenerator(std::unique_ptr<U> gen, F f = {}) {
-  return std::make_unique<TransformedAsyncGenerator<T, U, F>>(std::move(gen),
-                                                              std::move(f));
+template <typename T, typename U, typename F = detail::Identity>
+AsyncGeneratorPtr<T> transform(std::unique_ptr<U> gen, F f = {}) {
+  return std::make_unique<detail::TransformedAsyncGenerator<T, U, F>>(
+      std::move(gen), std::move(f));
+}
+
+namespace detail {
+template <typename T>
+class PlainValueAsyncGenerator : public AsyncGenerator<T> {
+private:
+  T val;
+
+public:
+  PlainValueAsyncGenerator(T val) : val(std::move(val)) {}
+  AsyncGenerator<T>::Ret poll() override { return std::make_optional(val); }
+};
+} // namespace detail
+
+template <typename T> AsyncGeneratorPtr<T> plainValue(T val) {
+  return std::make_unique<detail::PlainValueAsyncGenerator<T>>(std::move(val));
 }

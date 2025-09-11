@@ -1,5 +1,5 @@
 CXX       := g++
-CXXFLAGS  := -std=c++2b -Wall -Wextra -Werror -O2 -Iinclude -g
+CXXFLAGS  := -std=c++2b -Wall -Wextra -Werror -Iinclude -g
 LDFLAGS   := -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_gfx -pthread
 TESTFLAGS := -lgtest -lgtest_main
 

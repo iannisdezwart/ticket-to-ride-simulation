@@ -709,4 +709,5 @@ struct Map {
   std::array<int8_t /* PlayerIdx */, NumCities> trainStationClaims;
 
   Map();
+  uint8_t routeIdx(const char *city1, const char *city2);
 };

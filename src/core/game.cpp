@@ -1,4 +1,7 @@
 #include "core/game.hpp"
+#include "algo/train_car_card_matches_route_colour.hpp"
+#include "eval/completed_routes.hpp"
+#include "eval/european_express_bonus.hpp"
 #include "strat/player_strategy.hpp"
 #include <bit>
 
@@ -10,24 +13,27 @@ Game::Game(std::vector<std::unique_ptr<PlayerStrategy>> playerStrategies)
   playerIdx = 0;
 }
 
-void Game::run() {
+bool Game::run() {
+  if (numTurnsUntilEnd == 0) {
+    return false;
+  }
   if (!gameInitialiser.done && !gameInitialiser.poll().has_value()) {
-    return;
+    return true;
   }
   if (pendingDestinationTicketsChoiceDecision &&
       !awaitPendingDestinationTicketsChoiceDecision()) {
-    return;
+    return true;
   }
   if (pendingDrawSecondTrainCarCardDecision &&
       !awaitPendingDrawSecondTrainCarCardDecision()) {
-    return;
+    return true;
   }
   if (!pendingTurnDecision) {
     pendingTurnDecision = playerStrategies[playerIdx]->takeTurn(*this);
   }
   auto res = pendingTurnDecision->poll();
   if (!res.has_value()) {
-    return;
+    return true;
   }
   std::visit(
       [this](auto &&v) {
@@ -47,6 +53,31 @@ void Game::run() {
       },
       res.value());
   pendingTurnDecision = nullptr;
+  return true;
+}
+
+std::vector<PlayerReport> Game::makePlayerReports() {
+  auto numPlayers = uint8_t(playerStrategies.size());
+  auto europeanExpressBonusPoints =
+      evalEuropeanExpressBonus(numPlayers, map.routes);
+  auto completedRoutesPoints = evalCompletedRoutes(numPlayers, map.routes);
+  auto reps = std::vector<PlayerReport>(numPlayers);
+  for (auto playerIdx = 0; playerIdx < numPlayers; playerIdx++) {
+    auto &rep = reps[playerIdx];
+    rep.playerIdx = playerIdx;
+    rep.completedDestinationTickets = evalCompletedDestinationTickets(
+        playerIdx, map, playerStates[playerIdx].destinationTicketCards);
+    rep.unplayedTrainStationPoints = playerStates[playerIdx].trainStations * 4;
+    rep.europeanExpressBonusPoints = europeanExpressBonusPoints[playerIdx];
+    rep.completedRoutesPoints = completedRoutesPoints[playerIdx];
+    rep.totalPoints =
+        rep.completedRoutesPoints + rep.completedDestinationTickets.points +
+        rep.unplayedTrainStationPoints + rep.europeanExpressBonusPoints;
+  }
+  std::sort(reps.begin(), reps.end(), [](const auto &a, const auto &b) {
+    return a.totalPoints > b.totalPoints;
+  });
+  return reps;
 }
 
 void Game::handleThreeLocomotivesInFaceUpPile() {
@@ -74,7 +105,21 @@ void Game::handleThreeLocomotivesInFaceUpPile() {
   handleThreeLocomotivesInFaceUpPile();
 }
 
-void Game::passTurn() { playerIdx = (playerIdx + 1) % playerStates.size(); }
+void Game::passTurn() {
+  playerIdx = (playerIdx + 1) % playerStates.size();
+  if (numTurnsUntilEnd != -1) {
+    numTurnsUntilEnd--;
+  }
+}
+
+void Game::checkIfGameIsFinishing() {
+  if (numTurnsUntilEnd != -1) {
+    return;
+  }
+  if (playerStates[playerIdx].trainCars <= 2) {
+    numTurnsUntilEnd = playerStates.size();
+  }
+}
 
 void Game::processDrawTrainCarCardsDecision(
     const DrawTrainCarCardsDecision &d) {
@@ -96,26 +141,6 @@ void Game::processDrawTrainCarCardsDecision(
       d);
 }
 
-bool matches(TrainCarCard t, RouteColour r) {
-  if (r == RouteColour::Grey) {
-    return true;
-  }
-  // clang-format off
-  switch (t) {
-  case TrainCarCard::Pink:        return r == RouteColour::Pink;
-  case TrainCarCard::White:       return r == RouteColour::White;
-  case TrainCarCard::Blue:        return r == RouteColour::Blue;
-  case TrainCarCard::Yellow:      return r == RouteColour::Yellow;
-  case TrainCarCard::Orange:      return r == RouteColour::Orange;
-  case TrainCarCard::Black:       return r == RouteColour::Black;
-  case TrainCarCard::Red:         return r == RouteColour::Red;
-  case TrainCarCard::Green:       return r == RouteColour::Green;
-  case TrainCarCard::Locomotive:  return true;
-  default: throw std::out_of_range("Invalid TrainCarCard enumeration value.");
-  }
-  // clang-format on
-}
-
 void Game::processClaimRouteDecision(const ClaimRouteDecision &d) {
   auto checker = TrainCarCardHand();
   for (const auto &c : d.payment) {
@@ -125,20 +150,31 @@ void Game::processClaimRouteDecision(const ClaimRouteDecision &d) {
     checker.add(c);
   }
   if (!checker.subset(playerStates[playerIdx].trainCarCards)) {
+    std::cerr << "Route: " << standardCities[map.routes.city1[d.routeIdx]]
+              << " -> " << standardCities[map.routes.city2[d.routeIdx]]
+              << std::endl;
     std::cerr << "Player's hand: "
               << playerStates[playerIdx].trainCarCards.report();
     std::cerr << "Payment cards: " << checker.report();
     throw std::runtime_error("Payment is not a subset of hand.");
   }
   if (map.routes.claim[d.routeIdx] != -1) {
+    std::cerr << "Route: " << standardCities[map.routes.city1[d.routeIdx]]
+              << " -> " << standardCities[map.routes.city2[d.routeIdx]]
+              << std::endl;
+    std::cerr << "Claim: player #" << int(map.routes.claim[d.routeIdx])
+              << std::endl;
     throw std::runtime_error("Tried to claim already claimed route.");
   }
   auto colourUsed = TrainCarCard::Locomotive;
-  auto checkColourUsed = [&colourUsed](TrainCarCard c) {
+  auto checkColourUsed = [&colourUsed, this, &d](TrainCarCard c) {
     if (c == TrainCarCard::Locomotive) {
       return;
     }
     if (colourUsed != TrainCarCard::Locomotive && colourUsed != c) {
+      std::cerr << "Route: " << standardCities[map.routes.city1[d.routeIdx]]
+                << " -> " << standardCities[map.routes.city2[d.routeIdx]]
+                << std::endl;
       std::cerr << "Colour #1: " << trainCarCardToStr(colourUsed) << std::endl;
       std::cerr << "Colour #2: " << trainCarCardToStr(c) << std::endl;
       throw std::runtime_error("More than one colour used in route payment.");
@@ -152,13 +188,19 @@ void Game::processClaimRouteDecision(const ClaimRouteDecision &d) {
     checkColourUsed(c);
   }
   auto routeColour = map.routes.colour[d.routeIdx];
-  if (!matches(colourUsed, routeColour)) {
+  if (!trainCarCardMatchesRouteColour(colourUsed, routeColour)) {
+    std::cerr << "Route: " << standardCities[map.routes.city1[d.routeIdx]]
+              << " -> " << standardCities[map.routes.city2[d.routeIdx]]
+              << std::endl;
     std::cerr << "colourUsed: " << trainCarCardToStr(colourUsed) << std::endl;
     std::cerr << "routeColour: " << routeColourToStr(routeColour) << std::endl;
     throw std::runtime_error("Wrong colour used in route payment.");
   }
   auto length = map.routes.length[d.routeIdx];
   if (uint8_t(d.payment.size()) != length) {
+    std::cerr << "Route: " << standardCities[map.routes.city1[d.routeIdx]]
+              << " -> " << standardCities[map.routes.city2[d.routeIdx]]
+              << std::endl;
     std::cerr << "paymentSize: " << d.payment.size() << std::endl;
     std::cerr << "length: " << int(length) << std::endl;
     throw std::runtime_error("Route payment does not match route length.");
@@ -170,6 +212,9 @@ void Game::processClaimRouteDecision(const ClaimRouteDecision &d) {
     }
   }
   if (paymentForFerries > 0) {
+    std::cerr << "Route: " << standardCities[map.routes.city1[d.routeIdx]]
+              << " -> " << standardCities[map.routes.city2[d.routeIdx]]
+              << std::endl;
     std::cerr << "numFerries: " << int(map.routes.numFerries[d.routeIdx])
               << std::endl;
     throw std::runtime_error("Ferry cost not accounted for in route payment.");
@@ -183,9 +228,13 @@ void Game::processClaimRouteDecision(const ClaimRouteDecision &d) {
         tunnelExtraCost++;
       }
     }
-    std::cout << "Tunnel extra cost: " << tunnelExtraCost << std::endl;
     if (int(d.tunnelBackupPayment.size()) < tunnelExtraCost) {
       // Failed to pay extra cost. Route not claimed.
+      std::cout << "Player #" << int(playerIdx)
+                << " tried to build a tunnel route from "
+                << standardCities[map.routes.city1[d.routeIdx]] << " to "
+                << standardCities[map.routes.city2[d.routeIdx]]
+                << ", but failed to pay the tunnel extra cost." << std::endl;
       passTurn();
       return;
     }
@@ -201,6 +250,10 @@ void Game::processClaimRouteDecision(const ClaimRouteDecision &d) {
     playerStates[playerIdx].trainCarCards.remove(c);
     trainCarCardDeck.discard(c);
   }
+  std::cout << "Player #" << int(playerIdx) << " claimed the route from "
+            << standardCities[map.routes.city1[d.routeIdx]] << " to "
+            << standardCities[map.routes.city2[d.routeIdx]] << "." << std::endl;
+  checkIfGameIsFinishing();
   passTurn();
 }
 
@@ -218,10 +271,12 @@ void Game::processDrawDestinationTicketsDecision(
 void Game::processBuildTrainStationDecision(
     const BuildTrainStationDecision &d) {
   if (map.trainStationClaims[d.cityIdx] != -1) {
+    std::cerr << "City: " << standardCities[d.cityIdx] << std::endl;
     throw std::runtime_error("Another train station is already placed here.");
   }
   auto reqPayment = 4 - playerStates[playerIdx].trainStations;
   if (int(d.payment.size()) != reqPayment) {
+    std::cerr << "City: " << standardCities[d.cityIdx] << std::endl;
     std::cerr << "paymentSize: " << d.payment.size() << std::endl;
     std::cerr << "reqPayment: " << reqPayment << std::endl;
     throw std::runtime_error("Train station payment does not match cost.");
@@ -232,6 +287,7 @@ void Game::processBuildTrainStationDecision(
       continue;
     }
     if (colourUsed != TrainCarCard::Locomotive && colourUsed != c) {
+      std::cerr << "City: " << standardCities[d.cityIdx] << std::endl;
       std::cerr << "Colour #1: " << trainCarCardToStr(colourUsed) << std::endl;
       std::cerr << "Colour #2: " << trainCarCardToStr(c) << std::endl;
       throw std::runtime_error(
@@ -245,6 +301,8 @@ void Game::processBuildTrainStationDecision(
     playerStates[playerIdx].trainCarCards.remove(c);
     trainCarCardDeck.discard(c);
   }
+  std::cout << "Player #" << int(playerIdx) << " built a train station in "
+            << standardCities[d.cityIdx] << "." << std::endl;
   passTurn();
 }
 
@@ -254,6 +312,8 @@ void Game::processDrawTwoFaceDownTrainCarCardsDecision(
       trainCarCardDeck.drawFromFaceDownPile());
   playerStates[playerIdx].trainCarCards.add(
       trainCarCardDeck.drawFromFaceDownPile());
+  std::cout << "Player #" << int(playerIdx)
+            << " drew two face-down train car cards." << std::endl;
   passTurn();
 }
 
@@ -266,6 +326,8 @@ void Game::processDrawOneFaceUpLocomotiveCardDecision(
     }
     playerStates[playerIdx].trainCarCards.add(
         trainCarCardDeck.takeFromFaceUpPile(i));
+    std::cout << "Player #" << int(playerIdx)
+              << " drew a face-up locomotive card." << std::endl;
     passTurn();
     return;
   }
@@ -274,10 +336,12 @@ void Game::processDrawOneFaceUpLocomotiveCardDecision(
 
 void Game::processDrawOneFaceUpTrainCarCardDecision(
     const DrawOneFaceUpTrainCarCardDecision &d) {
-  playerStates[playerIdx].trainCarCards.add(
-      trainCarCardDeck.takeFromFaceUpPile(d.idx));
+  auto card = trainCarCardDeck.takeFromFaceUpPile(d.idx);
+  playerStates[playerIdx].trainCarCards.add(card);
   handleThreeLocomotivesInFaceUpPile();
-  d.secondAction();
+  std::cout << "Player #" << int(playerIdx) << " drew a face-up "
+            << trainCarCardToStr(card) << " train car card." << std::endl;
+  pendingDrawSecondTrainCarCardDecision = d.secondAction();
 }
 
 bool Game::awaitPendingDestinationTicketsChoiceDecision() {
@@ -288,6 +352,7 @@ bool Game::awaitPendingDestinationTicketsChoiceDecision() {
   pendingDestinationTicketsChoiceDecision = nullptr;
   auto mask = res.value();
   if (std::popcount(mask) < 1) {
+    std::cerr << "playerIdx: " << int(playerIdx) << std::endl;
     std::cerr << "mask: " << int(mask) << std::endl;
     throw std::runtime_error("Must keep at least one destination ticket.");
   }
@@ -297,6 +362,9 @@ bool Game::awaitPendingDestinationTicketsChoiceDecision() {
       playerStates[playerIdx].destinationTicketCards.push_back(card);
     }
   }
+  std::cout << "Player #" << int(playerIdx)
+            << " drew 3 new destination tickets and decided to keep "
+            << std::popcount(mask) << "." << std::endl;
   passTurn();
   return true;
 }
@@ -331,8 +399,10 @@ bool Game::awaitPendingDrawSecondTrainCarCardDecision() {
 void Game::processDrawSecondFaceUpTrainCarCardDecision(
     const DrawOneFaceUpTrainCarCardDecision::
         DrawSecondFaceUpTrainCarCardDecision &d) {
-  playerStates[playerIdx].trainCarCards.add(
-      trainCarCardDeck.takeFromFaceUpPile(d.idx));
+  auto card = trainCarCardDeck.takeFromFaceUpPile(d.idx);
+  playerStates[playerIdx].trainCarCards.add(card);
+  std::cout << "Player #" << int(playerIdx) << " drew a face-up "
+            << trainCarCardToStr(card) << " train car card." << std::endl;
   handleThreeLocomotivesInFaceUpPile();
 }
 
@@ -341,4 +411,6 @@ void Game::processDrawSecondFaceDownTrainCarCardDecision(
         DrawSecondFaceDownTrainCarCardDecision &) {
   playerStates[playerIdx].trainCarCards.add(
       trainCarCardDeck.drawFromFaceDownPile());
+  std::cout << "Player #" << int(playerIdx)
+            << " drew a face-down train card card." << std::endl;
 }

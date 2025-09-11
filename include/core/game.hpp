@@ -5,6 +5,7 @@
 #include "core/map.hpp"
 #include "core/player_state.hpp"
 #include "core/train_car_card_deck.hpp"
+#include "eval/player_report.hpp"
 #include "strat/player_strategy.forward.hpp"
 #include "turn/turn_decision.hpp"
 #include <cstdint>
@@ -20,7 +21,10 @@ public:
 
   Game(std::vector<std::unique_ptr<PlayerStrategy>> playerStrategies);
 
-  void run();
+  // Returns true when the game is still in progress.
+  bool run();
+
+  std::vector<PlayerReport> makePlayerReports();
 
 private:
   GameInitialiser gameInitialiser;
@@ -29,8 +33,10 @@ private:
   std::array<DestinationTicketCard, 3> destinationTicketsChoiceDecisionCards;
   AsyncGeneratorPtr<DrawOneFaceUpTrainCarCardDecision::SecondAction>
       pendingDrawSecondTrainCarCardDecision;
+  int8_t numTurnsUntilEnd{-1};
 
   void passTurn();
+  void checkIfGameIsFinishing();
 
   void processDrawTrainCarCardsDecision(const DrawTrainCarCardsDecision &d);
   void processClaimRouteDecision(const ClaimRouteDecision &d);

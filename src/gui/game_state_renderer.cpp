@@ -217,15 +217,15 @@ void GameStateRenderer::renderPlayerStateTrainCarCardsHand() {
       xOffs++;
     }
   };
-  drawCards(hand.numPink, RouteColour::Pink);
-  drawCards(hand.numWhite, RouteColour::White);
-  drawCards(hand.numBlue, RouteColour::Blue);
-  drawCards(hand.numYellow, RouteColour::Yellow);
-  drawCards(hand.numOrange, RouteColour::Orange);
-  drawCards(hand.numBlack, RouteColour::Black);
-  drawCards(hand.numRed, RouteColour::Red);
-  drawCards(hand.numGreen, RouteColour::Green);
-  drawCards(hand.numLocomotive, RouteColour::Grey);
+  drawCards(hand.count(TrainCarCard::Pink), RouteColour::Pink);
+  drawCards(hand.count(TrainCarCard::White), RouteColour::White);
+  drawCards(hand.count(TrainCarCard::Blue), RouteColour::Blue);
+  drawCards(hand.count(TrainCarCard::Yellow), RouteColour::Yellow);
+  drawCards(hand.count(TrainCarCard::Orange), RouteColour::Orange);
+  drawCards(hand.count(TrainCarCard::Black), RouteColour::Black);
+  drawCards(hand.count(TrainCarCard::Red), RouteColour::Red);
+  drawCards(hand.count(TrainCarCard::Green), RouteColour::Green);
+  drawCards(hand.count(TrainCarCard::Locomotive), RouteColour::Grey);
 }
 
 void GameStateRenderer::renderPlayerStateDestinationTickets() {

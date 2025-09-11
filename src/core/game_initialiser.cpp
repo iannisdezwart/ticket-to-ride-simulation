@@ -36,6 +36,8 @@ GameInitialiser::Ret GameInitialiser::poll() {
     if (std::popcount(mask) < 2) {
       throw std::range_error("Less than 2 destination tickets were chosen.");
     }
+    std::cout << "Player #" << i << " decided to keep " << std::popcount(mask)
+              << " destination tickets." << std::endl;
     for (auto j = 0uz; j < dealtTickets[i].size(); j++) {
       const auto card = dealtTickets[i][j];
       if (mask & (1 << j)) {

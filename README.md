@@ -3,11 +3,22 @@
 Simulating Ticket To Ride: Europe to find the best strategies.
 Work in progress...
 
+## Dependencies
+
+SDL2 & GTest.
+
+On MacOS:
+- `brew install sdl2 sdl2_image sdl2_ttf sdl2_gfx`
+- `brew install gtest`
+You might need to update your `$CPATH`, `$LIBRARY_PATH` & `$LD_LIBRARY_PATH`.
+
 ## Build & run
 
 Just `make` it.
+
 Run `bin/tests` to run all tests.
-Run `bin/simulate <num_players>` to run a simulation.
+
+Run `bin/simulate <strategy_name_1> ... <strategy_name_n>` to run a simulation.
 
 ## Core game
 
@@ -39,6 +50,13 @@ The decisions that can be made are listed in `include/turn/turn_decision.hpp`.
 
 Propmts what to do to `std::cout` and reads decisions from `std::cin`.
 Useful for debugging, or just to play the game in a very cumbersome fashion.
+
+### Greedy strategy
+
+This is a super simple strategy that just keeps all 4 destination tickets at the start of the game.
+It will then focus on the routes one by one, claiming all routes that are on the shortest path.
+When the strategy doesn't have enough train car cards to build any route, it will take two cards from the face-down draw pile.
+Rinse and repeat.
 
 ### More strategies...
 

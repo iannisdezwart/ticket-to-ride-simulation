@@ -3,5 +3,8 @@
 #include "core/game.hpp"
 
 void startGui(const Game &game);
-void runGui();
+
+// Returns true when the GUI is still running.
+bool runGui();
+
 void destroyGui();

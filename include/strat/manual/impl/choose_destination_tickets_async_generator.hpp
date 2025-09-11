@@ -39,7 +39,7 @@ private:
     std::cout << prompt << std::endl;
     for (auto i = 0uz; i < cards.size(); i++) {
       const auto &route = cards[i];
-      std::cout << "[" << i << "] " << standardCities[route.city1] << " ->"
+      std::cout << "[" << i << "] " << standardCities[route.city1] << " -> "
                 << standardCities[route.city2] << " (" << int(route.points)
                 << ") pts." << std::endl;
     }

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "core/map.hpp"
 #include "gui/render/font.hpp"
 #include "gui/render/texture.hpp"
