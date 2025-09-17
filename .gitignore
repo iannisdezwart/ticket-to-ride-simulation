@@ -2,4 +2,4 @@ simulate
 tests
 *.dSYM/
 .vscode/
-obj/
+build/

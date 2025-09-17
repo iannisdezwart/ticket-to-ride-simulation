@@ -1,7 +1,7 @@
-#include "algo/shortest_path.hpp"
+#include "algo/shortest_path_dijkstra.hpp"
 #include <queue>
 
-std::vector<uint8_t> shortestPath(const Map &map, uint8_t playerIdx,
+std::vector<uint8_t> shortestPathDijkstra(const Map &map, uint8_t playerIdx,
                                   uint8_t cityIdx1, uint8_t cityIdx2) {
   using P = std::pair<int /* dist */, uint8_t /* cityIdx */>;
   auto dist = std::vector<int>(NumCities, std::numeric_limits<int>::max());

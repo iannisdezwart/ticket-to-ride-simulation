@@ -17,11 +17,14 @@ Map::Map() {
   }
 }
 
-uint8_t Map::routeIdx(const char *city1, const char *city2) {
+uint8_t Map::routeIdx(const char *city1, const char *city2, int n) {
   for (auto i = 0; i < NumRoutes; i++) {
     auto c1 = standardCities[routes.city1[i]];
     auto c2 = standardCities[routes.city2[i]];
     if ((city1 == c1 && city2 == c2) || (city1 == c2 && city2 == c1)) {
+      if (n-- != 0) {
+        continue;
+      }
       return uint8_t(i);
     }
   }

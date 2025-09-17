@@ -117,7 +117,10 @@ void Game::checkIfGameIsFinishing() {
     return;
   }
   if (playerStates[playerIdx].trainCars <= 2) {
-    numTurnsUntilEnd = playerStates.size();
+    numTurnsUntilEnd = playerStates.size() + 1;
+    std::cout << "Game is finishing..." << std::endl;
+    std::cout << int(numTurnsUntilEnd - 1) << " more turns until end."
+              << std::endl;
   }
 }
 
@@ -142,6 +145,17 @@ void Game::processDrawTrainCarCardsDecision(
 }
 
 void Game::processClaimRouteDecision(const ClaimRouteDecision &d) {
+  auto length = map.routes.length[d.routeIdx];
+  auto availableTrainCars = playerStates[playerIdx].trainCars;
+  if (availableTrainCars < length) {
+    std::cerr << "Route: " << standardCities[map.routes.city1[d.routeIdx]]
+              << " -> " << standardCities[map.routes.city2[d.routeIdx]]
+              << std::endl;
+    std::cerr << "Available train cars: " << int(availableTrainCars)
+              << std::endl;
+    std::cerr << "Route length: " << int(length) << std::endl;
+    throw std::runtime_error("Route uses more train cars than available.");
+  }
   auto checker = TrainCarCardHand();
   for (const auto &c : d.payment) {
     checker.add(c);
@@ -196,7 +210,6 @@ void Game::processClaimRouteDecision(const ClaimRouteDecision &d) {
     std::cerr << "routeColour: " << routeColourToStr(routeColour) << std::endl;
     throw std::runtime_error("Wrong colour used in route payment.");
   }
-  auto length = map.routes.length[d.routeIdx];
   if (uint8_t(d.payment.size()) != length) {
     std::cerr << "Route: " << standardCities[map.routes.city1[d.routeIdx]]
               << " -> " << standardCities[map.routes.city2[d.routeIdx]]

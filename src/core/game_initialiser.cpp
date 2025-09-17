@@ -14,7 +14,7 @@ GameInitialiser::GameInitialiser(Game &game)
         game.destinationTicketCardDeck.drawRegularCard(),
     };
     playerPolling.push_back(
-        strat->chooseInitialDestinationTickets(dealtTickets[i]));
+        strat->chooseInitialDestinationTickets(game.map, dealtTickets[i]));
   }
 }
 
@@ -41,6 +41,9 @@ GameInitialiser::Ret GameInitialiser::poll() {
     for (auto j = 0uz; j < dealtTickets[i].size(); j++) {
       const auto card = dealtTickets[i][j];
       if (mask & (1 << j)) {
+        std::cout << " - " << standardCities[card.city1] << " -> "
+                  << standardCities[card.city2] << " (" << int(card.points)
+                  << ")" << std::endl;
         game.playerStates[i].destinationTicketCards.push_back(card);
       } else if (card.points < 20) {
         game.destinationTicketCardDeck.returnRegularCard(card);

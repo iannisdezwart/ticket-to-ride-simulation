@@ -1,8 +1,11 @@
+#include "algo/routes_strategy/serial_dijkstra_routes_strategy.hpp"
+#include "algo/routes_strategy/steiner_forest_routes_strategy.hpp"
 #include "core/game.hpp"
 #include "eval/completed_destination_tickets.hpp"
 #include "gui/gui.hpp"
-#include "strat/greedy/greedy_strategy.hpp"
-#include "strat/manual/manual_strategy.hpp"
+#include "strat/greedy/greedy_player_strategy.hpp"
+#include "strat/long_routes/long_routes_player_strategy.hpp"
+#include "strat/manual/manual_player_strategy.hpp"
 #include <algorithm>
 #include <iostream>
 #include <iterator>
@@ -29,12 +32,20 @@ int main(int argc, char **argv) {
     const auto &arg = argv[1 + i];
     auto &s = playerStrategies[i];
     if (std::strcmp(arg, "manual") == 0) {
-      s = std::make_unique<ManualStrategy>();
+      s = std::make_unique<ManualPlayerStrategy>();
     } else if (std::strcmp(arg, "greedy") == 0) {
-      s = std::make_unique<GreedyStrategy>();
+      s = std::make_unique<GreedyPlayerStrategy>(
+          std::make_unique<SerialDijkstraRoutesStrategy>());
+    } else if (std::strcmp(arg, "greedy-steiner") == 0) {
+      s = std::make_unique<GreedyPlayerStrategy>(
+          std::make_unique<SteinerForestRoutesStrategy>());
+    } else if (std::strcmp(arg, "long-routes") == 0) {
+      s = std::make_unique<LongRoutesPlayerStrategy>(
+          std::make_unique<SteinerForestRoutesStrategy>());
     } else {
       std::cerr << "Invalid strategy name '" << arg << "'." << std::endl
-                << "Valid strategies: 'manual', 'greedy'." << std::endl;
+                << "Valid strategies: 'manual', 'greedy', 'greedy-steiner'."
+                << std::endl;
       return 1;
     }
   }

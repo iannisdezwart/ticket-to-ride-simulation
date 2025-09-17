@@ -35,7 +35,7 @@ TEST_F(EuropeanExpressBonusTest, OnePlayerWins) {
   ASSERT_THAT(bonus, ElementsAre(10, 0));
 }
 
-TEST_F(EuropeanExpressBonusTest, BothPlayerWin) {
+TEST_F(EuropeanExpressBonusTest, BothPlayersWin) {
   map.routes.claim[map.routeIdx("London", "Amsterdam")] = playerIdx1;
   map.routes.claim[map.routeIdx("Amsterdam", "Frankfurt")] = playerIdx1;
   map.routes.claim[map.routeIdx("Frankfurt", "Essen")] = playerIdx1;

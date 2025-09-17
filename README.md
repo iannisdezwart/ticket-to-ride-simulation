@@ -5,20 +5,19 @@ Work in progress...
 
 ## Dependencies
 
-SDL2 & GTest.
+SDL2, GTest & OR-Tools.
 
-On MacOS:
-- `brew install sdl2 sdl2_image sdl2_ttf sdl2_gfx`
+- `brew install sdl2 sdl_image sdl2_ttf sdl2_gfx`
 - `brew install gtest`
-You might need to update your `$CPATH`, `$LIBRARY_PATH` & `$LD_LIBRARY_PATH`.
+- `brew install ortools`
 
 ## Build & run
 
-Just `make` it.
-
-Run `bin/tests` to run all tests.
-
-Run `bin/simulate <strategy_name_1> ... <strategy_name_n>` to run a simulation.
+- `mkdir -p build`
+- `cmake -S . -B build`
+- `cmake --build build`
+- Run `build/tests` to run all tests.
+- Run `build/simulate <strategy_name_1> ... <strategy_name_n>` to run a simulation.
 
 ## Core game
 
@@ -35,7 +34,7 @@ The main `Game` class can be found in `include/core/game.hpp`. It holds the enti
 Additionally, the players' strategies are also saved in the `Game` class.
 
 `Game::run()` will step through the game. It is non-blocking, so that the GUI can also run and I/O can be handled.
-This is especially important for `include/core/strat/manual/manual_strategy.hpp`, since it has to wait for the player to make a decision.
+This is especially important for `include/core/strat/manual/manual_player_strategy.hpp`, since it has to wait for the player to make a decision.
 Other automated strategies may have to perform a lot of computation and can therefore decide to yield to allow for I/O processing.
 In each step, pending processing is awaited, and `takeTurn()` is called on the current player's strategy.
 After the strategy has finished processing and made a decision, the `Game` class will update the game state based on the player's decision.
@@ -64,6 +63,6 @@ Work in progress 🛠️.
 
 ## GUI
 
-This project offers a GUI that is useful for `include/strat/manual/manual_strategy.hpp` and debugging.
+This project offers a GUI that is useful for `include/strat/manual/manual_player_strategy.hpp` and debugging.
 It uses SDL2 under the hood and is very basic. The map, all public game state and the current player's private information are displayed.
 <img width="1253" height="829" alt="Screenshot 2025-09-08 at 14 12 09" src="https://github.com/user-attachments/assets/2738cd7d-4df6-4a98-8bcc-237f47c8bd46" />
